@@ -7,7 +7,7 @@ on:
     branches: main
 
 jobs:
-  expo-build:
+  build-android:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,17 +25,22 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Install Expo CLI
-        run: npm install -g expo-cli
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Log in to Expo
-        run: expo login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
+        run: eas login --username ${{ secrets.EXPO_USERNAME }} --password ${{ secrets.EXPO_PASSWORD }}
 
-      - name: Build Android APK
-        run: expo prebuild && expo run:android --no-install
+      - name: Build Android APK with EAS
+        run: eas build --platform android --profile preview --non-interactive
+
+      - name: Download APK artifact
+        run: |
+          mkdir -p artifacts
+          eas build:list --json | jq -r '.[] | select(.platform=="android" and .status=="finished") | .artifacts.buildUrl' | xargs -n 1 curl -L -o artifacts/app.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: artifacts/app.apk
