@@ -28,16 +28,19 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Log in to Expo
-        run: eas login --username ${{ secrets.EXPO_USERNAME }} --password ${{ secrets.EXPO_PASSWORD }}
-
       - name: Build Android APK with EAS
         run: eas build --platform android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Download APK artifact
         run: |
           mkdir -p artifacts
-          eas build:list --json | jq -r '.[] | select(.platform=="android" and .status=="finished") | .artifacts.buildUrl' | xargs -n 1 curl -L -o artifacts/app.apk
+          eas build:list --json --limit=1 \
+            | jq -r '.[] | select(.platform=="android" and .status=="finished") | .artifacts.buildUrl' \
+            | xargs -n 1 curl -L -o artifacts/app.apk
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
